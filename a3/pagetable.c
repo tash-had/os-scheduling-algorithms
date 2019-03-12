@@ -38,9 +38,22 @@ int allocate_frame(pgtbl_entry_t *p) {
 
 		// All frames were in use, so victim frame must hold some page
 		// Write victim page to swap, if needed, and update pagetable
-		// IMPLEMENTATION NEEDED
-
-
+		// IMPLEMENTATION NEEDED 
+		pgtbl_entry_t *vict = coremap[frame].pte;
+		if (vict->frame & PG_DIRTY){ //Check if valid
+			int frame_num = vict->frame >> PAGE_SHIFT;
+			int swap_offset = swap_pageout(frame_num, vict->swap_off);
+			if (swap_offset == INVALID_SWAP){
+				exit(1);
+			}
+			vict->swap_off = swap_offset;
+			evict_dirty_count++;
+			vict->frame &= ~PG_DIRTY;
+		}else{
+			evict_clean_count++;
+		}
+		vict->frame |= PG_ONSWAP;   
+		vict->frame &= ~PG_VALID;   
 	}
 
 	// Record information for virtual page that will now be stored in frame
@@ -136,12 +149,15 @@ char *find_physpage(addr_t vaddr, char type) {
 
 	// IMPLEMENTATION NEEDED
 	// Use top-level page directory to get pointer to 2nd-level page table
-	(void)idx; // To keep compiler happy - remove when you have a real use.
-
-
+	
+	uintptr_t pde = pgdir[idx].pde;
+	if ((pde & PG_VALID) == 0){
+		pgdir[idx] = init_second_level();
+	}
+	pde = pde >> 1; //removing valid bit
 	// Use vaddr to get index into 2nd-level page table and initialize 'p'
-
-
+	unsigned pt_index = PGTBL_INDEX(vaddr);
+	p =(pde << PGDIR_SHIFT) +  pt_index*sizeof(pgtbl_entry_t);
 
 	// Check if p is valid or not, on swap or not, and handle appropriately
 
