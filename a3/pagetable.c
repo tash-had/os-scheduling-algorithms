@@ -155,19 +155,36 @@ char *find_physpage(addr_t vaddr, char type) {
 		pgdir[idx] = init_second_level();
 	}
 	pde = pde >> 1; //removing valid bit
+
 	// Use vaddr to get index into 2nd-level page table and initialize 'p'
+	pgtbl_entry_t *pg_table = (pgtbl_entry_t*)pde;
 	unsigned pt_index = PGTBL_INDEX(vaddr);
-	p =(pde << PGDIR_SHIFT) +  pt_index*sizeof(pgtbl_entry_t);
+	p = &pg_table[pt_index];
 
 	// Check if p is valid or not, on swap or not, and handle appropriately
-
+	if ((p->frame & PG_VALID) == 0){
+		if ((p->frame & PG_ONSWAP) == 0){
+			allocate_frame(p);
+			init_frame(p->frame, vaddr);
+			p->frame |= PG_DIRTY;
+		}else{
+			miss_count++;
+			allocate_frame(p);
+		}
+	}else{
+		hit_count++;
+	}
 
 
 	// Make sure that p is marked valid and referenced. Also mark it
 	// dirty if the access type indicates that the page will be written to.
+	p->frame |= PG_VALID; 
+	p->frame |= PG_REF;
+	ref_count++;
 
-
-
+	if (type == 'S' || type == 'M'){
+		p->frame |= PG_DIRTY;
+	}
 	// Call replacement algorithm's ref_fcn for this page
 	ref_fcn(p);
 
