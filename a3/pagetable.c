@@ -155,10 +155,8 @@ char *find_physpage(addr_t vaddr, char type) {
 	if ((pde & PG_VALID) == 0){
 		pgdir[idx] = init_second_level();
 	}
-	pde = pde >> 1; //removing valid bit
-
 	// Use vaddr to get index into 2nd-level page table and initialize 'p'
-	pgtbl_entry_t *pg_table = (pgtbl_entry_t*)pde;
+	pgtbl_entry_t *pg_table = (pgtbl_entry_t*)(pde & PAGE_MASK);
 	unsigned pt_index = PGTBL_INDEX(vaddr);
 	p = &pg_table[pt_index];
 
