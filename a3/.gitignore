@@ -1,0 +1,7 @@
+CMakeLists.txt
+cmake-build-debug/
+.gitignore/
+*.dSYM/
+.idea/
+traceprogs/matmul
+traceprogs/simpleloop

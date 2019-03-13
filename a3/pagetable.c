@@ -152,6 +152,7 @@ char *find_physpage(addr_t vaddr, char type) {
 	
 	uintptr_t pde = pgdir[idx].pde;
 	if ((pde & PG_VALID) == 0){
+	// pgdir is invalid (ie. there are no pages within). must initialize a new pte within pgdir[idx]
 		pgdir[idx] = init_second_level();
 	}
 	// Use vaddr to get index into 2nd-level page table and initialize 'p'
@@ -165,14 +166,16 @@ char *find_physpage(addr_t vaddr, char type) {
 		int frame = allocate_frame(p);
 		if ((p->frame & PG_ONSWAP) == 0){
 			init_frame(frame, vaddr);
-			p->frame &= ~PG_DIRTY;
+			p->frame &= ~PG_DIRTY; //&= ~ sets bit to 0
+			p->frame = frame << PAGE_SHIFT;
 		}else{
 			int ret = swap_pagein(frame, p->swap_off);
 			if (ret != 0){
 				exit(1);
 			}
+			p->frame = frame << PAGE_SHIFT;
 		}
-		
+
 	}else{
 		hit_count++;
 	}
@@ -181,7 +184,7 @@ char *find_physpage(addr_t vaddr, char type) {
 	// Make sure that p is marked valid and referenced. Also mark it
 	// dirty if the access type indicates that the page will be written to.
 	if (type == 'S' || type == 'M'){
-		p->frame |= PG_DIRTY;
+		p->frame |= PG_DIRTY; // |= sets bit to 1
 	}
 	p->frame |= PG_VALID; 
 	p->frame |= PG_REF;
