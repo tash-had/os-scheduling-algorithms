@@ -53,7 +53,8 @@ int allocate_frame(pgtbl_entry_t *p) {
 			evict_clean_count++;
 		}
 		vict->frame |= PG_ONSWAP;   
-		vict->frame &= ~PG_VALID;   
+		vict->frame &= ~PG_VALID; 
+		vict->frame &= ~PG_REF;  
 	}
 
 	// Record information for virtual page that will now be stored in frame
@@ -163,13 +164,17 @@ char *find_physpage(addr_t vaddr, char type) {
 
 	// Check if p is valid or not, on swap or not, and handle appropriately
 	if ((p->frame & PG_VALID) == 0){
+		miss_count++;
 		if ((p->frame & PG_ONSWAP) == 0){
-			allocate_frame(p);
-			init_frame(p->frame, vaddr);
+			int frame = allocate_frame(p);
+			init_frame(frame, vaddr);
 			p->frame |= PG_DIRTY;
 		}else{
-			miss_count++;
-			allocate_frame(p);
+			int frame = allocate_frame(p);
+			int ret = swap_pagein(frame, p->swap_off);
+			if (ret != 0){
+				exit(1);
+			}
 		}
 	}else{
 		hit_count++;
@@ -178,13 +183,12 @@ char *find_physpage(addr_t vaddr, char type) {
 
 	// Make sure that p is marked valid and referenced. Also mark it
 	// dirty if the access type indicates that the page will be written to.
-	p->frame |= PG_VALID; 
-	p->frame |= PG_REF;
-	ref_count++;
-
 	if (type == 'S' || type == 'M'){
 		p->frame |= PG_DIRTY;
 	}
+	p->frame |= PG_VALID; 
+	p->frame |= PG_REF;
+	ref_count++;
 	// Call replacement algorithm's ref_fcn for this page
 	ref_fcn(p);
 
