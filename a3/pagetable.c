@@ -46,7 +46,6 @@ int allocate_frame(pgtbl_entry_t *p) {
 			if (swap_offset == INVALID_SWAP){
 				exit(1);
 			}
-			vict->swap_off = swap_offset;
 			evict_dirty_count++;
 			vict->frame &= ~PG_DIRTY;
 		}else{
@@ -163,17 +162,17 @@ char *find_physpage(addr_t vaddr, char type) {
 	// Check if p is valid or not, on swap or not, and handle appropriately
 	if ((p->frame & PG_VALID) == 0){
 		miss_count++;
+		int frame = allocate_frame(p);
 		if ((p->frame & PG_ONSWAP) == 0){
-			int frame = allocate_frame(p);
 			init_frame(frame, vaddr);
-			p->frame |= PG_DIRTY;
+			p->frame &= ~PG_DIRTY;
 		}else{
-			int frame = allocate_frame(p);
 			int ret = swap_pagein(frame, p->swap_off);
 			if (ret != 0){
 				exit(1);
 			}
 		}
+		
 	}else{
 		hit_count++;
 	}
