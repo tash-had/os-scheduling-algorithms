@@ -46,12 +46,15 @@ int allocate_frame(pgtbl_entry_t *p) {
 			if (swap_offset == INVALID_SWAP){
 				exit(1);
 			}
+			vict->swap_off = swap_offset;
 			evict_dirty_count++;
 			vict->frame &= ~PG_DIRTY;
+			vict->frame |= PG_ONSWAP;
+			
 		}else{
 			evict_clean_count++;
-		}
-		vict->frame |= PG_ONSWAP;   
+		}   
+		
 		vict->frame &= ~PG_VALID; 
 		vict->frame &= ~PG_REF;  
 	}
@@ -150,11 +153,11 @@ char *find_physpage(addr_t vaddr, char type) {
 	// IMPLEMENTATION NEEDED
 	// Use top-level page directory to get pointer to 2nd-level page table
 	
-	uintptr_t pde = pgdir[idx].pde;
-	if ((pde & PG_VALID) == 0){
+	if ((pgdir[idx].pde & PG_VALID) == 0){
 	// pgdir is invalid (ie. there are no pages within). must initialize a new pte within pgdir[idx]
 		pgdir[idx] = init_second_level();
 	}
+	uintptr_t pde = pgdir[idx].pde;
 	// Use vaddr to get index into 2nd-level page table and initialize 'p'
 	pgtbl_entry_t *pg_table = (pgtbl_entry_t*)(pde & PAGE_MASK);
 	unsigned pt_index = PGTBL_INDEX(vaddr);
@@ -166,15 +169,14 @@ char *find_physpage(addr_t vaddr, char type) {
 		int frame = allocate_frame(p);
 		if ((p->frame & PG_ONSWAP) == 0){
 			init_frame(frame, vaddr);
-			p->frame &= ~PG_DIRTY; //&= ~ sets bit to 0
-			p->frame = frame << PAGE_SHIFT;
+			p->frame |= PG_DIRTY; //&= ~ sets bit to 0
 		}else{
 			int ret = swap_pagein(frame, p->swap_off);
 			if (ret != 0){
 				exit(1);
 			}
-			p->frame = frame << PAGE_SHIFT;
 		}
+		p->frame = frame << PAGE_SHIFT;
 
 	}else{
 		hit_count++;
