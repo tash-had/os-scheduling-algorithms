@@ -169,7 +169,6 @@ char *find_physpage(addr_t vaddr, char type) {
 	if (!(p->frame & PG_VALID)){ // page is invalid (miss)
 		miss_count++;
 		int frame = allocate_frame(p);
-		int b = !(p->frame & PG_ONSWAP);
 		if (!(p->frame & PG_ONSWAP)){ // bit indicates that the data is not on the swap file
 			init_frame(frame, vaddr);
 			p->frame |= PG_DIRTY; 
