@@ -5,3 +5,12 @@ cmake-build-debug/
 .idea/
 traceprogs/matmul
 traceprogs/simpleloop
+swapfile.*
+clock.o
+fifo.o
+lru.o
+pagetable.o
+rand.o
+sim
+sim.o
+swap.o
