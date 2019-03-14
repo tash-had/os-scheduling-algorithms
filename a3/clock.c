@@ -25,14 +25,13 @@ int clock_evict() {
 		pgtbl_entry_t* potential_evict = coremap[page_to_evict].pte;
 		if (potential_evict->frame & PG_REF){
 			potential_evict->frame &= ~PG_REF;
-			
+			page_to_evict++;
+			if (page_to_evict >= memsize){
+				page_to_evict = 0;
+		}	
 		}else{
 			found = 1;
-		}
-		page_to_evict++;
-		if (page_to_evict >= memsize){
-			page_to_evict = 0;
-		}		
+		}	
 	}
 	return page_to_evict;
 }
