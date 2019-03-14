@@ -40,7 +40,7 @@ int allocate_frame(pgtbl_entry_t *p) {
 		// Write victim page to swap, if needed, and update pagetable
 		// IMPLEMENTATION NEEDED 
 		pgtbl_entry_t *vict = coremap[frame].pte;
-		if (vict->frame & PG_DIRTY){ //Check if valid
+		if (vict->frame & PG_DIRTY){ //Check if victim frame is dirty
 			int frame_num = vict->frame >> PAGE_SHIFT;
 			int swap_offset = swap_pageout(frame_num, vict->swap_off);
 			if (swap_offset == INVALID_SWAP){
@@ -54,7 +54,7 @@ int allocate_frame(pgtbl_entry_t *p) {
 		}else{
 			vict->frame &= ~PG_DIRTY;
 			evict_clean_count++;
-		}   
+		}
 		
 		vict->frame &= ~PG_VALID; 
 		vict->frame &= ~PG_REF;  
@@ -148,7 +148,7 @@ void init_frame(int frame, addr_t vaddr) {
  * this function.
  */
 char *find_physpage(addr_t vaddr, char type) {
-	pgtbl_entry_t *p=NULL; // pointer to the full page table entry for vaddr
+		pgtbl_entry_t *p=NULL; // pointer to the full page table entry for vaddr
 	unsigned idx = PGDIR_INDEX(vaddr); // get index into page directory
 
 	// IMPLEMENTATION NEEDED
@@ -158,6 +158,7 @@ char *find_physpage(addr_t vaddr, char type) {
 	// pgdir is invalid (ie. there are no pages within). must initialize a new pte within pgdir[idx]
 		pgdir[idx] = init_second_level();
 	}
+
 	uintptr_t pde = pgdir[idx].pde;
 	// Use vaddr to get index into 2nd-level page table and initialize 'p'
 	pgtbl_entry_t *pg_table = (pgtbl_entry_t*)(pde & PAGE_MASK);
@@ -165,10 +166,11 @@ char *find_physpage(addr_t vaddr, char type) {
 	p = &pg_table[pt_index];
 
 	// Check if p is valid or not, on swap or not, and handle appropriately
-	if ((p->frame & PG_VALID) == 0){
+	if (!(p->frame & PG_VALID)){ // page is invalid (miss)
 		miss_count++;
 		int frame = allocate_frame(p);
-		if ((p->frame & PG_ONSWAP) == 0){
+		int b = !(p->frame & PG_ONSWAP);
+		if (!(p->frame & PG_ONSWAP)){ // bit indicates that the data is not on the swap file
 			init_frame(frame, vaddr);
 			p->frame |= PG_DIRTY; 
 		}else{
