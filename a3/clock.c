@@ -12,14 +12,29 @@ extern int debug;
 
 extern struct frame *coremap;
 
+int page_to_evict;
+
 /* Page to evict is chosen using the clock algorithm.
  * Returns the page frame number (which is also the index in the coremap)
  * for the page that is to be evicted.
  */
 
 int clock_evict() {
-	
-	return 0;
+	int found = 0;
+	while(!found){
+		pgtbl_entry_t* potential_evict = coremap[page_to_evict].pte;
+		if (potential_evict->frame & PG_REF){
+			potential_evict->frame &= ~PG_REF;
+			
+		}else{
+			found = 1;
+		}
+		page_to_evict++;
+		if (page_to_evict >= memsize){
+			page_to_evict = 0;
+		}		
+	}
+	return page_to_evict;
 }
 
 /* This function is called on each access to a page to update any information
@@ -27,7 +42,7 @@ int clock_evict() {
  * Input: The page table entry for the page that is being accessed.
  */
 void clock_ref(pgtbl_entry_t *p) {
-
+	p->frame |= PG_REF;
 	return;
 }
 
@@ -35,4 +50,5 @@ void clock_ref(pgtbl_entry_t *p) {
  * algorithm. 
  */
 void clock_init() {
+	page_to_evict= 0;
 }
