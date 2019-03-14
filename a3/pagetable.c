@@ -52,6 +52,7 @@ int allocate_frame(pgtbl_entry_t *p) {
 			vict->frame |= PG_ONSWAP;
 			
 		}else{
+			vict->frame &= ~PG_DIRTY;
 			evict_clean_count++;
 		}   
 		
@@ -169,12 +170,13 @@ char *find_physpage(addr_t vaddr, char type) {
 		int frame = allocate_frame(p);
 		if ((p->frame & PG_ONSWAP) == 0){
 			init_frame(frame, vaddr);
-			p->frame |= PG_DIRTY; //&= ~ sets bit to 0
+			p->frame |= PG_DIRTY; 
 		}else{
 			int ret = swap_pagein(frame, p->swap_off);
 			if (ret != 0){
 				exit(1);
 			}
+			p->frame &= ~PG_ONSWAP; //&= ~ sets bit to 0 as frame got swapped in
 		}
 		p->frame = frame << PAGE_SHIFT;
 
