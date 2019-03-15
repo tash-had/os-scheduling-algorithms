@@ -61,10 +61,14 @@ extern char *find_physpage(addr_t vaddr, char type);
 
 extern void print_pagedirectory(void);
 
+
 struct frame {
 	char in_use;       // True if frame is allocated, False if frame is free
-	pgtbl_entry_t *pte;// Pointer back to pagetable entry (pte) for page
-	                   // stored in this frame
+	pgtbl_entry_t *pte;// Pointer back to pagetable entry (pte) for page stored in this frame
+
+	// LRU Alg. Fields
+	struct frame *next_pgt_frame;
+	struct frame *prev_pgt_frame;
 };
 
 /* The coremap holds information about physical memory.
