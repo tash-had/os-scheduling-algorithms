@@ -168,7 +168,9 @@ char *find_physpage(addr_t vaddr, char type) {
 	// Check if p is valid or not, on swap or not, and handle appropriately
 	if (!(p->frame & PG_VALID)){ // page is invalid (miss)
 		miss_count++;
+
 		int frame = allocate_frame(p); // newly allocated frame or a frame of a page that was just evicted
+
 		if (!(p->frame & PG_ONSWAP)){ // bit indicates that the data is not on the swap file
 			init_frame(frame, vaddr); // entry is invalid and not on swapfile. so it is the first reference
 			p->frame |= PG_DIRTY;     //   to the page data and we must initialize our fresh frame with this new data
