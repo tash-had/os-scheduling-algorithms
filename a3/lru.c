@@ -13,14 +13,14 @@ extern int debug;
 extern struct frame *coremap;
 
 struct frame *head_frame;
-struct frame *tail_frame;
+struct frame *last_frame;
 
 /* Page to evict is chosen using the accurate LRU algorithm.
  * Returns the page frame number (which is also the index in the coremap)
  * for the page that is to be evicted.
  */
 int lru_evict() {
-	struct frame *vict = tail_frame; // victim is always the tail
+	struct frame *vict = last_frame; // victim is always the last_frame
 	return vict->pte->frame >> PAGE_SHIFT;
 }
 
@@ -39,11 +39,11 @@ void lru_ref(pgtbl_entry_t *p) {
 	}
 	// remove the mru_frame
 	mru_frame->prev_pgt_frame->next_pgt_frame = mru_frame->next_pgt_frame;
-	if (mru_frame == tail_frame) {
-		// reset the tail if mru_frame is the current tail
-		tail_frame = tail_frame->prev_pgt_frame;
+	if (mru_frame == last_frame) {
+		// reset the last_frame if mru_frame is the current last_frame
+		last_frame = last_frame->prev_pgt_frame;
 	} else {
-		// if mru_frame is not the current tail, update the prev pointer of the node after mru_frame
+		// if mru_frame is not the current last_frame, update the prev pointer of the node after mru_frame
 		mru_frame->next_pgt_frame->prev_pgt_frame = mru_frame->prev_pgt_frame;
 	}
 	// update pointers to make mru_frame the new head
@@ -75,5 +75,5 @@ void lru_init() {
 		}
 	}
 	head_frame = &coremap[0];
-	tail_frame = &coremap[memsize - 1];
+	last_frame = &coremap[memsize - 1];
 }
