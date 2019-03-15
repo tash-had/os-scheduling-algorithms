@@ -23,20 +23,8 @@ int size;
  */
 
 int lru_evict() {
-	if (head_frame == NULL || tail_frame == NULL) {
-		fprintf(stderr,"Encountered a NULL reference to head or tail frame while evicting from LRU cache.\n");
-		exit(1);
-	}
 	struct frame *vict = tail_frame;
-	if (tail_frame->prev_pgt_frame != NULL) {
-		tail_frame->prev_pgt_frame->next_pgt_frame = tail_frame->next_pgt_frame;
-	} else {
-		// attempting to evict the only frame left. must update head.
-		head_frame = NULL;
-	}
-	tail_frame = tail_frame->prev_pgt_frame; // we just deleted last node. so new tail will be 2nd last nodee
-	vict->prev_pgt_frame = NULL;
-	return vict->pte->frame;
+	return vict->pte->frame >> PAGE_SHIFT;
 }
 
 /* This function is called on each access to a page to update any information
@@ -46,17 +34,22 @@ int lru_evict() {
 void lru_ref(pgtbl_entry_t *p) {
 	int frame_num = p->frame >> PAGE_SHIFT;
 	struct frame *mru_frame = &coremap[frame_num];
-//	mru_frame->pte = p;
 
-	mru_frame->next_pgt_frame = head_frame;
-	if (head_frame != NULL) {
-		head_frame->prev_pgt_frame = mru_frame;
-	} else { // both head and tail are null. must set the tail to our lru_frame
-		tail_frame = mru_frame;
+	if (mru_frame == head_frame) {
+		// there's either only 1 frame, or the frame that was referenced is
+		// already at the head of our list. no work to be done here.
+		return;
 	}
-
+	mru_frame->prev_pgt_frame->next_pgt_frame = mru_frame->next_pgt_frame;
+	if (mru_frame == tail_frame) {
+		tail_frame = tail_frame->prev_pgt_frame;
+	} else {
+		mru_frame->next_pgt_frame->prev_pgt_frame = mru_frame->prev_pgt_frame;
+	}
+	mru_frame->prev_pgt_frame = NULL;
+	mru_frame->next_pgt_frame = head_frame;
+	mru_frame->next_pgt_frame->prev_pgt_frame = mru_frame;
 	head_frame = mru_frame;
-	head_frame->prev_pgt_frame = NULL;
 
 	return;
 }
@@ -68,9 +61,18 @@ void lru_ref(pgtbl_entry_t *p) {
 void lru_init() {
 	// set next and prev to NULL for every frame
 	for (int i = 0; i < memsize; i++) {
-		(&coremap[i])->prev_pgt_frame = NULL;
-		(&coremap[i])->next_pgt_frame = NULL;
+		if (i > 0) {
+			(&coremap[i])->prev_pgt_frame = &coremap[i-1];
+		} else {
+			(&coremap[i])->prev_pgt_frame = NULL;
+
+		}
+		if (i < memsize - 1) {
+			(&coremap[i])->next_pgt_frame = &coremap[i+1];
+		} else {
+			(&coremap[i])->next_pgt_frame = NULL;
+		}
 	}
-	head_frame = NULL;
-	tail_frame = NULL;
+	head_frame = &coremap[0];
+	tail_frame = &coremap[memsize - 1];
 }
