@@ -34,7 +34,7 @@ int lru_evict() {
 		// attempting to evict the only frame left. must update head.
 		head_frame = NULL;
 	}
-	tail_frame = tail_frame->prev_pgt_frame;
+	tail_frame = tail_frame->prev_pgt_frame; // we just deleted last node. so new tail will be 2nd last nodee
 	vict->prev_pgt_frame = NULL;
 	return vict->pte->frame;
 }
@@ -44,15 +44,18 @@ int lru_evict() {
  * Input: The page table entry for the page that is being accessed.
  */
 void lru_ref(pgtbl_entry_t *p) {
-	struct frame lru_frame = coremap[p->frame];
-	lru_frame.next_pgt_frame = head_frame;
+	int frame_num = p->frame >> PAGE_SHIFT;
+	struct frame *mru_frame = &coremap[frame_num];
+//	mru_frame->pte = p;
+
+	mru_frame->next_pgt_frame = head_frame;
 	if (head_frame != NULL) {
-		head_frame->prev_pgt_frame = &lru_frame;
+		head_frame->prev_pgt_frame = mru_frame;
 	} else { // both head and tail are null. must set the tail to our lru_frame
-		tail_frame = &lru_frame;
+		tail_frame = mru_frame;
 	}
 
-	head_frame = &lru_frame;
+	head_frame = mru_frame;
 	head_frame->prev_pgt_frame = NULL;
 
 	return;
@@ -65,7 +68,9 @@ void lru_ref(pgtbl_entry_t *p) {
 void lru_init() {
 	// set next and prev to NULL for every frame
 	for (int i = 0; i < memsize; i++) {
-		coremap[i].prev_pgt_frame = NULL;
-		coremap[i].next_pgt_frame = NULL;
+		(&coremap[i])->prev_pgt_frame = NULL;
+		(&coremap[i])->next_pgt_frame = NULL;
 	}
+	head_frame = NULL;
+	tail_frame = NULL;
 }
