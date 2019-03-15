@@ -66,7 +66,7 @@ struct frame {
 	char in_use;       // True if frame is allocated, False if frame is free
 	pgtbl_entry_t *pte;// Pointer back to pagetable entry (pte) for page stored in this frame
 
-	// LRU Alg. Fields
+	// LRU Linked List fields
 	struct frame *next_pgt_frame;
 	struct frame *prev_pgt_frame;
 };
